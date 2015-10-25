@@ -8,6 +8,44 @@ namespace SPLibraryMetadata
 {
     public class SharePointMetadataHelper
     {
+        public static object GetLibraryMetadata(Type libraryType, string webFullUrl, string libraryTitle,
+            CamlQueryIntergratedWithPaging camlQueryIntergratedWithPaging,
+            Action<string, PagingIntegrationMetadata> updateCurrentPageQueryActionWithPaging)
+        {
+            if (string.IsNullOrEmpty(webFullUrl) || string.IsNullOrEmpty(libraryTitle)) return null;
+
+            var context = new ClientContext(webFullUrl);
+
+            var secure = new SecureString();
+            foreach (var c in "wildbouy~123")
+            {
+                secure.AppendChar(c);
+            }
+            context.Credentials = new SharePointOnlineCredentials("adamduong@adittech.onmicrosoft.com", secure);
+
+            var web = context.Web;
+            var list = context.Web.Lists.GetByTitle(libraryTitle);
+
+            // Obtain selection for web metadata
+            context.Load(web);
+            context.Load(list, includes => includes.ItemCount);
+
+            // Get selected fields of items
+            var listItemCollection = list.GetItems(camlQueryIntergratedWithPaging.Query);
+            context.Load(listItemCollection);
+
+            context.ExecuteQuery();
+
+            camlQueryIntergratedWithPaging.Metadata.Status = PagingStatus.Idle;
+
+            updateCurrentPageQueryActionWithPaging.Invoke(listItemCollection.ListItemCollectionPosition == null
+                ? string.Empty
+                : listItemCollection.ListItemCollectionPosition.PagingInfo, camlQueryIntergratedWithPaging.Metadata);
+
+            var result = PropertiesMapper(web, list, listItemCollection, libraryType);
+            return result;
+        }
+
         public static object GetLibraryMetadata(Type libraryType, string webFullUrl, string libraryTitle, CamlQuery camlQuery, Action<string> updateCurrentPageQueryAction)
         {
             if (string.IsNullOrEmpty(webFullUrl) || string.IsNullOrEmpty(libraryTitle)) return null;
@@ -15,7 +53,7 @@ namespace SPLibraryMetadata
             var context = new ClientContext(webFullUrl);
 
             var secure = new SecureString();
-                foreach (var c in "wildbouy@123")
+                foreach (var c in "wildbouy~123")
                 {
                     secure.AppendChar(c);
                 }

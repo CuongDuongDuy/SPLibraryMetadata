@@ -15,13 +15,9 @@ namespace SPLibraryMetadata
         private const string OrderByTemplate = @"<OrderBy>{0}</OrderBy>";
         private const string OrderFieldTemplate = @"<FieldRef Name='{0}' Ascending='{1}'/>";
 
-        private PageInformation currentPageInformation;
-
-        public PageInformation CurrentPageInformation
-        {
-            get { return currentPageInformation; }
-        }
-
+        private PageInformation CurrentPageInformation { get; set; }
+        private PagingIntegrationMetadata CurrentPagingIntegrationMetadata { get; set; }
+        public PagingIntegrationCallbacks PagingIntegrationCallbacks { get; set; }
         private PagingNavigation PagingNavigationSetting { get; set; }
         public int NumberPerPage { get; set; }
         public IEnumerable<string> SelectedFields { get; set; }
@@ -98,7 +94,7 @@ namespace SPLibraryMetadata
             return result;
         }
 
-        public CamlQuery GetCamlQuery(PagingNavigationMove navigationMove)
+       public CamlQuery GetCamlQuery(PagingNavigationMove navigationMove)
         {
             if (!CheckValidArguments())
             {
@@ -108,7 +104,7 @@ namespace SPLibraryMetadata
             {
                 ViewXml = GetCamlQueryXml()
             };
-            currentPageInformation = PagingNavigationSetting.GetPageInformation(navigationMove);
+            CurrentPageInformation = PagingNavigationSetting.GetPageInformation(navigationMove);
             var itemsPosition = new ListItemCollectionPosition
             {
                 PagingInfo = CurrentPageInformation.Query
@@ -144,6 +140,59 @@ namespace SPLibraryMetadata
             return GetCamlQuery(navigationMove);
         }
 
+        public void UpdateCurrentPageQuery(string pagingInformation)
+        {
+            CurrentPageInformation.Query = pagingInformation;
+            PagingNavigationSetting.UpdatePageInformation(CurrentPageInformation);
+        }
+
+        #region Integrate with paging
+
+        public void Integration(PagingIntegrationCallbacks callbacks)
+        {
+            PagingIntegrationCallbacks = callbacks;
+        }
+
+        public void HandleEventFromPaging(PagingIntegrationMetadata metadata)
+        {
+            CurrentPageInformation =
+                PagingNavigationSetting.GetPageInformation(metadata.Status == PagingStatus.Initializing
+                    ? PagingNavigationMove.RowsPerPage
+                    : metadata.Move);
+            CurrentPagingIntegrationMetadata = metadata;
+        }
+
+        public CamlQueryIntergratedWithPaging GetCamlQueryIntegrateWithPaging()
+        {
+            if (!CheckValidArguments())
+            {
+                return null;
+            }
+            var result = new CamlQueryIntergratedWithPaging
+            {
+                Query = new CamlQuery {ViewXml = GetCamlQueryXml()}
+            };
+            var itemsPosition = new ListItemCollectionPosition
+            {
+                PagingInfo = CurrentPageInformation.Query
+            };
+            result.Query.ListItemCollectionPosition = itemsPosition;
+            result.Metadata = CurrentPagingIntegrationMetadata;
+            return result;
+        }
+
+        public void UpdateCurrentPageQueryIntegratedWithPaging(string pagingInformation,
+            PagingIntegrationMetadata metadata)
+        {
+            CurrentPageInformation.Query = pagingInformation;
+            PagingNavigationSetting.UpdatePageInformation(CurrentPageInformation);
+            CurrentPagingIntegrationMetadata = metadata;
+            PagingIntegrationCallbacks.CallIn(metadata);
+        }
+
+        #endregion
+
+
         public CamlQueryExtension(IEnumerable<string> selectedFields, IEnumerable<FieldCriterionInformation> fieldCriteria, IEnumerable<OrderedField> orderedFields, IEnumerable<OrderedField> defaultOrderedFields, int numberPerPage = 50, FieldCriteriaOperator criteriaOperator = FieldCriteriaOperator.And)
         {
             SelectedFields = selectedFields;
@@ -158,16 +207,10 @@ namespace SPLibraryMetadata
             PagingNavigationSetting = new PagingNavigation();
         }
 
-        public void UpdateCurrentPageQuery(string pagingInformation)
-        {
-            CurrentPageInformation.Query = pagingInformation;
-            PagingNavigationSetting.UpdatePageInformation(CurrentPageInformation);
-        }
-
         public CamlQueryExtension(Type itemsType, IEnumerable<FieldCriterionInformation> fieldCriteria, IEnumerable<OrderedField> orderedFields, IEnumerable<OrderedField> defaultOrderedFields, int numberPerPage = 50, FieldCriteriaOperator criteriaOperator = FieldCriteriaOperator.And)
             : this(MapDataTypeToList(itemsType), fieldCriteria, orderedFields, defaultOrderedFields, numberPerPage, criteriaOperator)
         {
-
+            PagingIntegrationCallbacks = new PagingIntegrationCallbacks();
         }
 
         private static IEnumerable<string> MapDataTypeToList(Type itemsType)
@@ -179,6 +222,7 @@ namespace SPLibraryMetadata
             }
             return result;
         }
+       
     }
 
     #region Field for filtering - Where clause
@@ -349,4 +393,9 @@ namespace SPLibraryMetadata
 
     #endregion
 
+    public class CamlQueryIntergratedWithPaging
+    {
+        public CamlQuery Query { get; set; }
+        public PagingIntegrationMetadata Metadata { get; set; }
+    }
 }

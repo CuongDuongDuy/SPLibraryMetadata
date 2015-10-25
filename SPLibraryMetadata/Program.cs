@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Security.Cryptography.X509Certificates;
 
 namespace SPLibraryMetadata
 {
     internal class Program
     {
+        
         private static void Main(string[] args)
         {
             const string webFullUrl = "https://adittech.sharepoint.com/sites/appdevelopment/";
@@ -39,29 +41,44 @@ namespace SPLibraryMetadata
                 new OrderedField("Title"),
             };
 
-
+            
             // If defaultOrderedFields == null, will use default value in CamlQueryExtension: ("almDate", OrderedFieldDirection.Descending)
             var cqExtension = new CamlQueryExtension(typeof(AdLibraryItemModel), fieldCriteria, orderedFields, defaultOrderedFields, 10);
-            var camlQuery = cqExtension.GetCamlQuery(PagingNavigationMove.Current);
-            var adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQuery, cqExtension.UpdateCurrentPageQuery) as AdLibraryModel;
+            var pgingExtension = new PagingViewModel(10, cqExtension.HandleEventFromPaging, cqExtension.Integration);
 
-            camlQuery = cqExtension.GetCamlQuery(PagingNavigationMove.Next);
-            adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQuery, cqExtension.UpdateCurrentPageQuery) as AdLibraryModel;
+            var camlQueryIntegratedWithPaging = cqExtension.GetCamlQueryIntegrateWithPaging();
+            var adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQueryIntegratedWithPaging, cqExtension.UpdateCurrentPageQueryIntegratedWithPaging) as AdLibraryModel;
+            adLibraryModel.Show();
 
-            camlQuery = cqExtension.GetCamlQuery(PagingNavigationMove.Next);
-            adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQuery, cqExtension.UpdateCurrentPageQuery) as AdLibraryModel;
+            pgingExtension.MoveNextCommand(PagingNavigationMove.Next);
+            camlQueryIntegratedWithPaging = cqExtension.GetCamlQueryIntegrateWithPaging();
+            adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQueryIntegratedWithPaging, cqExtension.UpdateCurrentPageQueryIntegratedWithPaging) as AdLibraryModel;
+            adLibraryModel.Show();
 
-            camlQuery = cqExtension.GetCamlQuery(PagingNavigationMove.Next);
+            var camlQuery = cqExtension.GetCamlQuery(PagingNavigationMove.Next);
             adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQuery, cqExtension.UpdateCurrentPageQuery) as AdLibraryModel;
+            adLibraryModel.Show();
+
+            //camlQuery = cqExtension.GetCamlQuery(PagingNavigationMove.Next);
+            //adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQuery, cqExtension.UpdateCurrentPageQuery) as AdLibraryModel;
+            //adLibraryModel.Show();
 
             camlQuery = cqExtension.GetCamlQuery(PagingNavigationMove.Previous);
             adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQuery, cqExtension.UpdateCurrentPageQuery) as AdLibraryModel;
+            adLibraryModel.Show();
 
-            camlQuery = cqExtension.GetCamlQuery(PagingNavigationMove.Previous);
-            adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQuery, cqExtension.UpdateCurrentPageQuery) as AdLibraryModel;
+            pgingExtension.MoveNextCommand(PagingNavigationMove.Next);
+            camlQueryIntegratedWithPaging = cqExtension.GetCamlQueryIntegrateWithPaging();
+            adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQueryIntegratedWithPaging, cqExtension.UpdateCurrentPageQueryIntegratedWithPaging) as AdLibraryModel;
+            adLibraryModel.Show();
 
-            camlQuery = cqExtension.GetCamlQuery(PagingNavigationMove.Current);
-            adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQuery, cqExtension.UpdateCurrentPageQuery) as AdLibraryModel;
+            //camlQuery = cqExtension.GetCamlQuery(PagingNavigationMove.Previous);
+            //adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQuery, cqExtension.UpdateCurrentPageQuery) as AdLibraryModel;
+            //adLibraryModel.Show();
+
+            //camlQuery = cqExtension.GetCamlQuery(PagingNavigationMove.Current);
+            //adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQuery, cqExtension.UpdateCurrentPageQuery) as AdLibraryModel;
+            //adLibraryModel.Show();
 
             Console.WriteLine("Press any key to continue...");
             Console.ReadKey();
