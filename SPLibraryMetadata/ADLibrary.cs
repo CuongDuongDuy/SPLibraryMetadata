@@ -16,12 +16,13 @@ namespace SPLibraryMetadata
         public string Description { get; set; }
         public DateTime Created { get; set; }
         public List<AdLibraryItemModel> Items { get; set; }
+        public int TotalItemCount { get; set; }
 
         public void Show()
         {
             Console.WriteLine("----------------------------------------------------");
             Console.WriteLine("Title: {0} - Description: {1}", Title, Description);
-            Console.WriteLine("Documents:");
+            Console.WriteLine("Documents: {0}",TotalItemCount);
             for (var i = 0; i < Items.Count; i++)
             {
                 Console.WriteLine("{0}.Title: {1}, Document Type: {2}, Comments: {3}", i, Items[i].Title,

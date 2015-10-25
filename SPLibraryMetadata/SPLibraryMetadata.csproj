@@ -46,6 +46,7 @@
     <Compile Include="ADLibrary.cs" />
     <Compile Include="CamlQueryExtension.cs" />
     <Compile Include="ClaimLibrary.cs" />
+    <Compile Include="IntegrationObject.cs" />
     <Compile Include="MemberLibrary.cs" />
     <Compile Include="PagingExtension.cs" />
     <Compile Include="Program.cs" />

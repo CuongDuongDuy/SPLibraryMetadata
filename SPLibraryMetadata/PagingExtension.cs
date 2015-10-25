@@ -21,7 +21,7 @@ namespace SPLibraryMetadata
             set
             {
                 rowsPerPage = value;
-                UpdateNavigation(PagingNavigationMove.RowsPerPage);
+                UpdateNavigation(PagingNavigationMove.Reset);
             }
         }
 
@@ -61,7 +61,7 @@ namespace SPLibraryMetadata
         {
             MovePreviousCommand = (parm) => UpdateNavigation(PagingNavigationMove.Previous);
             MoveNextCommand = (parm) => UpdateNavigation(PagingNavigationMove.Next);
-            RowsPerPageCommand = (parm) => UpdateNavigation(PagingNavigationMove.RowsPerPage);
+            RowsPerPageCommand = (parm) => UpdateNavigation(PagingNavigationMove.Reset);
 
             var integrationParameter = new PagingIntegrationCallbacks
             {
@@ -76,12 +76,12 @@ namespace SPLibraryMetadata
             #region Default Values
 
             TotalRows = 0;
-            CurrentPage = 0;
+            CurrentPage = 1;
             TotalPages = 0;
 
             this.rowsPerPage = rowsPerPage;
             Status = PagingStatus.Initializing;
-            CurrentMove = PagingNavigationMove.RowsPerPage;
+            CurrentMove = PagingNavigationMove.Reset;
 
             ExcuteOutCallback();
 
@@ -116,7 +116,7 @@ namespace SPLibraryMetadata
                         CurrentPage++;
                     }
                     break;
-                case PagingNavigationMove.RowsPerPage:
+                case PagingNavigationMove.Reset:
                     CurrentPage = 1;
                     break;
             }
@@ -145,8 +145,8 @@ namespace SPLibraryMetadata
             var result = new PagingIntegrationMetadata
             {
                 Status = Status,
-                CurrentPage = CurrentPage - 1,
-                RowsPerPage = RowsPerPage,
+                CurrentPage = CurrentPage,
+                ItemsPerPage = RowsPerPage,
                 Move = CurrentMove
             };
             return result;
@@ -156,7 +156,7 @@ namespace SPLibraryMetadata
         {
             if (metadata == null) return;
             Status = metadata.Status;
-            if (metadata.Move != PagingNavigationMove.RowsPerPage) return;
+            if (metadata.Move != PagingNavigationMove.Reset) return;
             TotalRows = metadata.TotalRows;
             CurrentPage = 1;
             UpdateNavigationUi();
@@ -166,26 +166,4 @@ namespace SPLibraryMetadata
 
     }
 
-    public enum PagingStatus
-    {
-        Initializing,
-        Loading,
-        Idle
-    }
-
-    public class PagingIntegrationMetadata
-    {
-        public PagingStatus Status { get; set; }
-        public PagingNavigationMove Move { get; set; }
-        public int CurrentPage { get; set; }
-        public int RowsPerPage { get; set; }
-        public int TotalRows { get; set; }
-
-    }
-
-    public class PagingIntegrationCallbacks
-    {
-        public Action<PagingIntegrationMetadata> CallIn { get; set; }
-        public Action<PagingIntegrationMetadata> CallOut { get; set; }
-    }
 }

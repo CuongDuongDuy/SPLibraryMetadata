@@ -9,8 +9,8 @@ namespace SPLibraryMetadata
     public class SharePointMetadataHelper
     {
         public static object GetLibraryMetadata(Type libraryType, string webFullUrl, string libraryTitle,
-            CamlQueryIntergratedWithPaging camlQueryIntergratedWithPaging,
-            Action<string, PagingIntegrationMetadata> updateCurrentPageQueryActionWithPaging)
+            CamlQueryIntegrationMetadata camlQueryIntegrationMetadata,
+            Action<CamlQueryIntegrationMetadata> integrationWithCamlQueryExtension)
         {
             if (string.IsNullOrEmpty(webFullUrl) || string.IsNullOrEmpty(libraryTitle)) return null;
 
@@ -31,16 +31,16 @@ namespace SPLibraryMetadata
             context.Load(list, includes => includes.ItemCount);
 
             // Get selected fields of items
-            var listItemCollection = list.GetItems(camlQueryIntergratedWithPaging.Query);
+            var listItemCollection = list.GetItems(camlQueryIntegrationMetadata.Query);
             context.Load(listItemCollection);
 
             context.ExecuteQuery();
 
-            camlQueryIntergratedWithPaging.Metadata.Status = PagingStatus.Idle;
-
-            updateCurrentPageQueryActionWithPaging.Invoke(listItemCollection.ListItemCollectionPosition == null
+            camlQueryIntegrationMetadata.PagingInformation = listItemCollection.ListItemCollectionPosition == null
                 ? string.Empty
-                : listItemCollection.ListItemCollectionPosition.PagingInfo, camlQueryIntergratedWithPaging.Metadata);
+                : listItemCollection.ListItemCollectionPosition.PagingInfo;
+
+            integrationWithCamlQueryExtension.Invoke(camlQueryIntegrationMetadata);
 
             var result = PropertiesMapper(web, list, listItemCollection, libraryType);
             return result;
