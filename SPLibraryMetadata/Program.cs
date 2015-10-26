@@ -43,26 +43,38 @@ namespace SPLibraryMetadata
 
             
             // If defaultOrderedFields == null, will use default value in CamlQueryExtension: ("almDate", OrderedFieldDirection.Descending)
-            var cqExtension = new CamlQueryExtension(typeof(AdLibraryItemModel), fieldCriteria, orderedFields, defaultOrderedFields, 10);
-            var pgingExtension = new PagingViewModel(10, cqExtension);
+            var pgingExtension = new PagingViewModel(10);
+            var cqExtension = new CamlQueryExtension(typeof (AdLibraryItemModel), fieldCriteria, orderedFields,
+                defaultOrderedFields, FieldCriteriaOperator.And, pgingExtension);
 
-            var camlQueryIntegrationMetadata = cqExtension.GetCamlQueryIntegrateMetadata();
-            var adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQueryIntegrationMetadata, cqExtension.IntegrateWithCamlQueryExtension) as AdLibraryModel;
+            var camlQueryIntegrationMetadata = cqExtension.GetCamlQueryIntegratedMetadata();
+            var adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQueryIntegrationMetadata) as AdLibraryModel;
+            adLibraryModel.Show();
+
+            pgingExtension.RowsPerPage = 30;
+            camlQueryIntegrationMetadata = cqExtension.GetCamlQueryIntegratedMetadata();
+            adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQueryIntegrationMetadata) as AdLibraryModel;
+            adLibraryModel.Show();
+
+            fieldCriteria = new List<FieldCriterionInformation>
+            {
+                new FieldCriterionInformation
+                {
+                    Name = "DocumentType",
+                    Type = FieldCriterionDataType.Choice,
+                    ComparisonOperatorOperator = FieldCriterionComparisonOperator.Eq,
+                    Value = "Data"
+                }
+            };
+
+            camlQueryIntegrationMetadata = cqExtension.GetCamlQueryIntegratedMetadata(fieldCriteria,
+                FieldCriteriaOperator.And);
+            adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQueryIntegrationMetadata) as AdLibraryModel;
             adLibraryModel.Show();
 
             pgingExtension.MoveNextCommand(PagingNavigationMove.Next);
-            camlQueryIntegrationMetadata = cqExtension.GetCamlQueryIntegrateMetadata();
-            adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQueryIntegrationMetadata, cqExtension.IntegrateWithCamlQueryExtension) as AdLibraryModel;
-            adLibraryModel.Show();
-
-            fieldCriteria.RemoveAt(0);
-            camlQueryIntegrationMetadata = cqExtension.GetCamlQueryIntegrateMetadata(fieldCriteria);
-            adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQueryIntegrationMetadata, cqExtension.IntegrateWithCamlQueryExtension) as AdLibraryModel;
-            adLibraryModel.Show();
-
-            pgingExtension.MoveNextCommand(PagingNavigationMove.Next);
-            camlQueryIntegrationMetadata = cqExtension.GetCamlQueryIntegrateMetadata();
-            adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQueryIntegrationMetadata, cqExtension.IntegrateWithCamlQueryExtension) as AdLibraryModel;
+            camlQueryIntegrationMetadata = cqExtension.GetCamlQueryIntegratedMetadata();
+            adLibraryModel = SharePointMetadataHelper.GetLibraryMetadata(typeof(AdLibraryModel), webFullUrl, libTitle, camlQueryIntegrationMetadata) as AdLibraryModel;
             adLibraryModel.Show();
 
             Console.WriteLine("Press any key to continue...");

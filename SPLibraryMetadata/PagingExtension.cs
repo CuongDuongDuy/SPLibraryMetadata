@@ -50,33 +50,26 @@ namespace SPLibraryMetadata
         public Action<PagingNavigationMove> MovePreviousCommand { get; set; }
         public Action<PagingNavigationMove> MoveNextCommand { get; set; }
         public Action<PagingNavigationMove> RowsPerPageCommand { get; set; }
-
-        private Action<PagingIntegrationMetadata> OutCallbackAction { get; set; }
+        public Action<PagingIntegrationMetadata> IntegrateWithCamlQueryExAction { get; set; }
 
         #endregion
 
         #region Constructor and initialization
 
-        public PagingViewModel(int rowsPerPage, CamlQueryExtension extension)
+        public PagingViewModel(int rowsPerPage)
         {
             MovePreviousCommand = (parm) => UpdateNavigation(PagingNavigationMove.Previous);
             MoveNextCommand = (parm) => UpdateNavigation(PagingNavigationMove.Next);
             RowsPerPageCommand = (parm) => UpdateNavigation(PagingNavigationMove.Reset);
-
-            OutCallbackAction = extension.HandleEventFromPaging;
-            extension.IntegrateWithPagingAction = UpdatePagingMetadata;
 
             #region Default Values
 
             TotalRows = 0;
             CurrentPage = 1;
             TotalPages = 0;
-
             this.rowsPerPage = rowsPerPage;
             Status = PagingStatus.Initializing;
             CurrentMove = PagingNavigationMove.Reset;
-
-            ExcuteOutCallback();
 
             #endregion
         }
@@ -90,7 +83,7 @@ namespace SPLibraryMetadata
             CurrentMove = navigationMove;
             UpdateCurrentPage(navigationMove);
             UpdateNavigationUi();
-            ExcuteOutCallback();
+            MakeRequestToCamlQrEx();
         }
 
         private void UpdateCurrentPage(PagingNavigationMove navigationMove)
@@ -122,10 +115,10 @@ namespace SPLibraryMetadata
             HasNext = CurrentPage != TotalPages;
         }
 
-        private void ExcuteOutCallback()
+        public void MakeRequestToCamlQrEx()
         {
-            if (OutCallbackAction == null) return;
-            OutCallbackAction.Invoke(GetPagingMetadata());
+            if (IntegrateWithCamlQueryExAction == null) return;
+            IntegrateWithCamlQueryExAction.Invoke(GetPagingMetadata());
         }
 
 
@@ -145,7 +138,7 @@ namespace SPLibraryMetadata
             return result;
         }
 
-        public void UpdatePagingMetadata(PagingIntegrationMetadata metadata)
+        public void IntegrateWithPagingEx(PagingIntegrationMetadata metadata)
         {
             Status = metadata.Status;
             if (metadata.Move != PagingNavigationMove.Reset) return;

@@ -20,11 +20,12 @@ namespace SPLibraryMetadata
 
     }
 
-    public class CamlQueryIntegrationMetadata
+    public class CamlQryIntegrationMetadata
     {
         public CamlQuery Query { get; set; }
         public string PagingInformation { get; set; }
         public PagingIntegrationMetadata PagingIntegrationMetadata { get; set; }
+        public Action<CamlQryIntegrationMetadata> IntegrateToCamlQrExAction { get; set; }
 
     }
 }
