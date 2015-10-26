@@ -20,12 +20,6 @@ namespace SPLibraryMetadata
 
     }
 
-    public class PagingIntegrationCallbacks
-    {
-        public Action<PagingIntegrationMetadata> CallIn { get; set; }
-        public Action<PagingIntegrationMetadata> CallOut { get; set; }
-    }
-
     public class CamlQueryIntegrationMetadata
     {
         public CamlQuery Query { get; set; }

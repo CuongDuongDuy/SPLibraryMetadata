@@ -57,21 +57,14 @@ namespace SPLibraryMetadata
 
         #region Constructor and initialization
 
-        public PagingViewModel(int rowsPerPage, Action<PagingIntegrationMetadata> outCallback, Action<PagingIntegrationCallbacks> integration)
+        public PagingViewModel(int rowsPerPage, CamlQueryExtension extension)
         {
             MovePreviousCommand = (parm) => UpdateNavigation(PagingNavigationMove.Previous);
             MoveNextCommand = (parm) => UpdateNavigation(PagingNavigationMove.Next);
             RowsPerPageCommand = (parm) => UpdateNavigation(PagingNavigationMove.Reset);
 
-            var integrationParameter = new PagingIntegrationCallbacks
-            {
-                CallIn = UpdatePagingMetadata,
-                CallOut = outCallback
-            };
-
-            OutCallbackAction = outCallback; 
-
-            integration.Invoke(integrationParameter);
+            OutCallbackAction = extension.HandleEventFromPaging;
+            extension.IntegrateWithPagingAction = UpdatePagingMetadata;
 
             #region Default Values
 
@@ -154,7 +147,6 @@ namespace SPLibraryMetadata
 
         public void UpdatePagingMetadata(PagingIntegrationMetadata metadata)
         {
-            if (metadata == null) return;
             Status = metadata.Status;
             if (metadata.Move != PagingNavigationMove.Reset) return;
             TotalRows = metadata.TotalRows;

@@ -8,9 +8,7 @@ namespace SPLibraryMetadata
 {
     public class SharePointMetadataHelper
     {
-        public static object GetLibraryMetadata(Type libraryType, string webFullUrl, string libraryTitle,
-            CamlQueryIntegrationMetadata camlQueryIntegrationMetadata,
-            Action<CamlQueryIntegrationMetadata> integrationWithCamlQueryExtension)
+        public static object GetLibraryMetadata(Type libraryType, string webFullUrl, string libraryTitle, CamlQueryIntegrationMetadata camlQueryIntegrationMetadata, Action<CamlQueryIntegrationMetadata> integrationWithCamlQueryExtension)
         {
             if (string.IsNullOrEmpty(webFullUrl) || string.IsNullOrEmpty(libraryTitle)) return null;
 
@@ -41,40 +39,6 @@ namespace SPLibraryMetadata
                 : listItemCollection.ListItemCollectionPosition.PagingInfo;
 
             integrationWithCamlQueryExtension.Invoke(camlQueryIntegrationMetadata);
-
-            var result = PropertiesMapper(web, list, listItemCollection, libraryType);
-            return result;
-        }
-
-        public static object GetLibraryMetadata(Type libraryType, string webFullUrl, string libraryTitle, CamlQuery camlQuery, Action<string> updateCurrentPageQueryAction)
-        {
-            if (string.IsNullOrEmpty(webFullUrl) || string.IsNullOrEmpty(libraryTitle)) return null;
-
-            var context = new ClientContext(webFullUrl);
-
-            var secure = new SecureString();
-                foreach (var c in "wildbouy~123")
-                {
-                    secure.AppendChar(c);
-                }
-            context.Credentials = new SharePointOnlineCredentials("adamduong@adittech.onmicrosoft.com", secure);
-
-            var web = context.Web;
-            var list = context.Web.Lists.GetByTitle(libraryTitle);
-
-            // Obtain selection for web metadata
-            context.Load(web);
-            context.Load(list, includes => includes.ItemCount);
-
-            // Get selected fields of items
-            var listItemCollection = list.GetItems(camlQuery);
-            context.Load(listItemCollection);
-
-            context.ExecuteQuery();
-
-            updateCurrentPageQueryAction.Invoke(listItemCollection.ListItemCollectionPosition == null
-                ? string.Empty
-                : listItemCollection.ListItemCollectionPosition.PagingInfo);
 
             var result = PropertiesMapper(web, list, listItemCollection, libraryType);
             return result;
