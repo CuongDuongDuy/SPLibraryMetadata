@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Net;
 using System.Security;
 using Microsoft.SharePoint.Client;
 using File = Microsoft.SharePoint.Client.File;
@@ -8,18 +11,14 @@ namespace SPLibraryMetadata
 {
     public class SharePointMetadataHelper
     {
-        public static object GetLibraryMetadata(Type libraryType, string webFullUrl, string libraryTitle, CamlQryIntegrationMetadata camlQryIntegrationMetadata)
+        public static object GetLibraryMetadata(Type libraryType, string webFullUrl, string libraryTitle,
+            CamlQryIntegrationMetadata camlQryIntegrationMetadata)
         {
             if (string.IsNullOrEmpty(webFullUrl) || string.IsNullOrEmpty(libraryTitle)) return null;
 
             var context = new ClientContext(webFullUrl);
 
-            var secure = new SecureString();
-            foreach (var c in "wildbouy~123")
-            {
-                secure.AppendChar(c);
-            }
-            context.Credentials = new SharePointOnlineCredentials("adamduong@adittech.onmicrosoft.com", secure);
+            context.Credentials = CredentialCache.DefaultNetworkCredentials;
 
             var web = context.Web;
             var list = context.Web.Lists.GetByTitle(libraryTitle);
@@ -50,13 +49,6 @@ namespace SPLibraryMetadata
 
             var context = new ClientContext(webFullUrl);
 
-            var secure = new SecureString();
-            foreach (var c in "wildbouy@123")
-            {
-                secure.AppendChar(c);
-            }
-            context.Credentials = new SharePointOnlineCredentials("adamduong@adittech.onmicrosoft.com", secure);
-
             var web = context.Web;
             var list = context.Web.Lists.GetByTitle(libraryTitle);
 
@@ -70,11 +62,13 @@ namespace SPLibraryMetadata
 
             context.ExecuteQuery();
 
+
             var result = PropertiesMapper(web, list, listItemCollection, libraryType);
             return result;
         }
 
-        private static object PropertiesMapper(Web webMetadata, List libMetadata, ListItemCollection itemsMetadata, Type dataType)
+        private static object PropertiesMapper(Web webMetadata, List libMetadata, ListItemCollection itemsMetadata,
+            Type dataType)
         {
             if (webMetadata == null || libMetadata == null)
                 return null;
@@ -95,7 +89,8 @@ namespace SPLibraryMetadata
                             propertyInfo.SetValue(result, libMetadata.ItemCount, null);
                             break;
                         default:
-                            propertyInfo.SetValue(result, webMetadata.GetType().GetProperty(propertyInfo.Name).GetValue(webMetadata, null), null);
+                            propertyInfo.SetValue(result,
+                                webMetadata.GetType().GetProperty(propertyInfo.Name).GetValue(webMetadata, null), null);
                             break;
                     }
                 }
@@ -104,6 +99,7 @@ namespace SPLibraryMetadata
             // Map data for library items metadata
             foreach (var itemMetadata in itemsMetadata)
             {
+                var test = itemMetadata.Id;
                 var item = Activator.CreateInstance(itemType);
                 foreach (var propertyInfo in itemType.GetProperties())
                 {
@@ -115,9 +111,12 @@ namespace SPLibraryMetadata
                         }
                         catch (ArgumentException)
                         {
-                            var safeType = Nullable.GetUnderlyingType(propertyInfo.PropertyType) ?? propertyInfo.PropertyType;
+                            var safeType = Nullable.GetUnderlyingType(propertyInfo.PropertyType) ??
+                                           propertyInfo.PropertyType;
 
-                            var safeValue = (itemMetadata.FieldValues[propertyInfo.Name] == null) ? null : Convert.ChangeType(itemMetadata.FieldValues[propertyInfo.Name], safeType);
+                            var safeValue = (itemMetadata.FieldValues[propertyInfo.Name] == null)
+                                ? null
+                                : Convert.ChangeType(itemMetadata.FieldValues[propertyInfo.Name], safeType);
                             propertyInfo.SetValue(item, safeValue, null);
                         }
 
@@ -144,7 +143,8 @@ namespace SPLibraryMetadata
             return fileInfo.Stream;
         }
 
-        public static SharePointFieldMetadata GetFieldValues(string webFullUrl, string fieldTitle, string libraryTitle = "Documents")
+        public static SharePointFieldMetadata GetFieldValues(string webFullUrl, string fieldTitle,
+            string libraryTitle = "Documents")
         {
             SharePointFieldMetadata result;
             try
@@ -170,6 +170,119 @@ namespace SPLibraryMetadata
                 result = new SharePointFieldMetadata();
             }
             return result;
+        }
+
+        public static void CreateFolder(string webFullUrl, string libraryName, string folderName)
+        {
+            using (var clientContext = new ClientContext(webFullUrl))
+            {
+                var web = clientContext.Web;
+                var list = web.Lists.GetByTitle(libraryName);
+                list.RootFolder.Folders.Add(folderName);
+                clientContext.ExecuteQuery();
+            }
+        }
+
+        public static void ChangePermissionForLibrary(string webFullUrl, string libraryName,
+            IEnumerable<SpPermission> permissions = null)
+        {
+            using (var ctx = new ClientContext(webFullUrl))
+            {
+                var list = ctx.Web.Lists.GetByTitle(libraryName);
+                if (permissions == null)
+                {
+                    list.ResetRoleInheritance();
+                }
+                else
+                {
+                    list.BreakRoleInheritance(false, false);
+                    var spPermissions = permissions as SpPermission[] ?? permissions.ToArray();
+                    foreach (var permission in spPermissions)
+                    {
+                        foreach (var userOrGroup in permission.UsersOrGroups)
+                        {
+                            Principal user = ctx.Web.EnsureUser(userOrGroup);
+                            var roleDefinition = ctx.Site.RootWeb.RoleDefinitions.GetByType(permission.RoleType);
+                            var roleBindings = new RoleDefinitionBindingCollection(ctx) { roleDefinition };
+                            list.RoleAssignments.Add(user, roleBindings);
+                        }
+
+                    }
+                }
+                ctx.ExecuteQuery();
+            }
+        }
+
+        // Can not change permission for Folder on CSOM 2010 v14
+        // Must apply to each item
+        public static void ChangePermissionForFolder(string webFullUrl, string libraryName, string folderName,
+            IEnumerable<SpPermission> permissions = null)
+        {
+            using (var ctx = new ClientContext(webFullUrl))
+            {
+                var relativeUrl = string.Format("{0}/{1}", libraryName, folderName);
+                var folder = ctx.Web.GetFolderByServerRelativeUrl(relativeUrl);
+                ctx.Load(folder.Files);
+                ctx.ExecuteQuery();
+                if (permissions == null)
+                {
+                    foreach (var file in folder.Files)
+                    {
+                        file.ListItemAllFields.ResetRoleInheritance();
+                    }
+                }
+                else
+                {
+                    var spPermissions = permissions as SpPermission[] ?? permissions.ToArray();
+                    foreach (var file in folder.Files)
+                    {
+                        file.ListItemAllFields.BreakRoleInheritance(false, false);
+                        foreach (var permission in spPermissions)
+                        {
+                            foreach (var userOrGroup in permission.UsersOrGroups)
+                            {
+                                Principal user = ctx.Web.EnsureUser(userOrGroup);
+                                var roleDefinition = ctx.Site.RootWeb.RoleDefinitions.GetByType(permission.RoleType);
+                                var roleBindings = new RoleDefinitionBindingCollection(ctx) { roleDefinition };
+                                file.ListItemAllFields.RoleAssignments.Add(user, roleBindings);
+                            }
+
+                        }
+                    }
+                }
+                ctx.ExecuteQuery();
+            }
+        }
+
+        public static void ChangePermissionForSite(string webFullUrl, IEnumerable<SpPermission> permissions = null)
+        {
+            using (var ctx = new ClientContext(webFullUrl))
+            {
+                var web = ctx.Web;
+                ctx.Load(web);
+                ctx.ExecuteQuery();
+                if (permissions == null)
+                {
+                    web.ResetRoleInheritance();
+                }
+                else
+                {
+                    web.BreakRoleInheritance(false, false);
+                    var spPermissions = permissions as SpPermission[] ?? permissions.ToArray();
+                    foreach (var permission in spPermissions)
+                    {
+                        foreach (var userOrGroup in permission.UsersOrGroups)
+                        {
+                            var user = ctx.Web.EnsureUser(userOrGroup);
+                            var roleDefinition = ctx.Site.RootWeb.RoleDefinitions.GetByType(permission.RoleType);
+                            var roleBindings = new RoleDefinitionBindingCollection(ctx) { roleDefinition };
+                            web.RoleAssignments.Add(user, roleBindings);
+                        }
+
+                    }
+                }
+                ctx.ExecuteQuery();
+            }
         }
     }
 }
