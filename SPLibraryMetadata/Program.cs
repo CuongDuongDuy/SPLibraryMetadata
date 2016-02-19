@@ -8,10 +8,10 @@ namespace SPLibraryMetadata
 {
     internal class Program
     {
-        
+
         private static void Main(string[] args)
         {
-            const string webFullUrl = "http://mysite.pandi.ctcplc.com/personal/cuong_duongduy";
+            const string webFullUrl = @"http://mysite.pandi.ctcplc.com/personal/cuong_duongduy/Acclaim";
             const string libTitle = @"Documents";
             const string folderName = @"Test";
 
@@ -43,7 +43,7 @@ namespace SPLibraryMetadata
             //    new OrderedField("Title"),
             //};
 
-            
+
             //// If defaultOrderedFields == null, will use default value in CamlQueryExtension: ("almDate", OrderedFieldDirection.Descending)
             //var pgingExtension = new PagingViewModel(10);
             //var cqExtension = new CamlQueryExtension(typeof (AdLibraryItemModel), fieldCriteria, orderedFields,
@@ -81,16 +81,16 @@ namespace SPLibraryMetadata
 
 
             //SharePointMetadataHelper.CreateFolder(webFullUrl, libTitle, folderName);
-            
+
             var newPermissions = new[]
             {
                 new SpPermission(new[] {"CTCPLC\\Cuong.DuongDuy"}, RoleType.Administrator),
                 new SpPermission(new[] {"CTCPLC\\p&i developers "}, RoleType.Contributor)
             };
-            SharePointMetadataHelper.ChangePermissionForLibrary(webFullUrl, libTitle, newPermissions);
-            //SharePointMetadataHelper.ChangePermissionForFolder(webFullUrl, libTitle, folderName,newPermissions);
+            //SharePointMetadataHelper.ChangePermissionForLibrary(webFullUrl, libTitle, newPermissions);
+            SharePointMetadataHelper.ChangePermissionForFolder(webFullUrl, libTitle, folderName, newPermissions);
 
-            //SharePointMetadataHelper.ChangePermissionForSite(webFullUrl, true);
+            //SharePointMetadataHelper.ChangePermissionForSite(webFullUrl, null);
             Console.WriteLine("Press any key to continue...");
             Console.ReadKey();
         }

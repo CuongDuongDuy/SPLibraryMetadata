@@ -213,44 +213,37 @@ namespace SPLibraryMetadata
             }
         }
 
-        // Can not change permission for Folder on CSOM 2010 v14
-        // Must apply to each item
         public static void ChangePermissionForFolder(string webFullUrl, string libraryName, string folderName,
             IEnumerable<SpPermission> permissions = null)
         {
             using (var ctx = new ClientContext(webFullUrl))
             {
-                var relativeUrl = string.Format("{0}/{1}", libraryName, folderName);
-                var folder = ctx.Web.GetFolderByServerRelativeUrl(relativeUrl);
-                ctx.Load(folder.Files);
-                ctx.ExecuteQuery();
+                var list = ctx.Web.Lists.GetByTitle(libraryName);
+                var folderUrl = string.Format("{0}/{1}/{2}", webFullUrl, libraryName, folderName);
+                var folder = list.LoadItemByUrl(folderUrl);
                 if (permissions == null)
                 {
-                    foreach (var file in folder.Files)
-                    {
-                        file.ListItemAllFields.ResetRoleInheritance();
-                    }
+                    folder.ResetRoleInheritance();
+                    ctx.ExecuteQuery();
                 }
                 else
                 {
+                    if (folder == null) return;
+                    folder.BreakRoleInheritance(false, false);
                     var spPermissions = permissions as SpPermission[] ?? permissions.ToArray();
-                    foreach (var file in folder.Files)
+                    foreach (var permission in spPermissions)
                     {
-                        file.ListItemAllFields.BreakRoleInheritance(false, false);
-                        foreach (var permission in spPermissions)
+                        foreach (var userOrGroup in permission.UsersOrGroups)
                         {
-                            foreach (var userOrGroup in permission.UsersOrGroups)
-                            {
-                                Principal user = ctx.Web.EnsureUser(userOrGroup);
-                                var roleDefinition = ctx.Site.RootWeb.RoleDefinitions.GetByType(permission.RoleType);
-                                var roleBindings = new RoleDefinitionBindingCollection(ctx) { roleDefinition };
-                                file.ListItemAllFields.RoleAssignments.Add(user, roleBindings);
-                            }
-
+                            var user = ctx.Web.EnsureUser(userOrGroup);
+                            var roleDefinition = ctx.Site.RootWeb.RoleDefinitions.GetByType(permission.RoleType);
+                            var roleBindings = new RoleDefinitionBindingCollection(ctx) {roleDefinition};
+                            folder.RoleAssignments.Add(user, roleBindings);
                         }
+
                     }
+                    ctx.ExecuteQuery();
                 }
-                ctx.ExecuteQuery();
             }
         }
 
@@ -284,5 +277,22 @@ namespace SPLibraryMetadata
                 ctx.ExecuteQuery();
             }
         }
+        
     }
+
+    static class ListExtensions
+    {
+        public static ListItem LoadItemByUrl(this List list, string url)
+        {
+            var context = list.Context;
+            var query = new CamlQuery
+            {
+                ViewXml = string.Format("<View><RowLimit>1</RowLimit><Query><Where><Eq><FieldRef Name='FileRef'/><Value Type='Url'>{0}</Value></Eq></Where></Query></View>", url),
+            };
+            var items = list.GetItems(query);
+            context.Load(items);
+            context.ExecuteQuery();
+            return items.Count > 0 ? items[0] : null;
+        }
+    } 
 }
